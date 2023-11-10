@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import validator from "validator";
+import bcryptjs from "bcryptjs";
 
 const userSchema = new mongoose.Schema({
 	username: {
@@ -10,6 +11,7 @@ const userSchema = new mongoose.Schema({
 	email: {
 		type: String,
 		require: true,
+		unique: true,
 		trim: true,
 		lowercase: true,
 		validate(value) {
@@ -29,6 +31,34 @@ const userSchema = new mongoose.Schema({
 			}
 		},
 	},
+});
+
+userSchema.statics.findByCredentials = async function (email, password) {
+	const user = await User.findOne({ email });
+
+	if (!user) {
+		throw new Error("Unable to login");
+	}
+
+	const isMatch = await bcryptjs.compare(password, user.password);
+
+	if (!isMatch) {
+		throw new Error("Unable to login");
+	}
+
+	return user;
+};
+
+// hash the plain text password
+userSchema.pre("save", async function (next) {
+	// this.password;
+	console.log("before save");
+
+	if (this.isModified("password")) {
+		this.password = await bcryptjs.hash(this.password, 8);
+	}
+
+	next();
 });
 
 const User = mongoose.model("User", userSchema);

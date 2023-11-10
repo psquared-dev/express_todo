@@ -47,10 +47,14 @@ todoRoutes.put("/todos/:id", async (req, res) => {
 			return res.status(400).json({ error: "Invalid Updates" });
 		}
 
-		const todo = await Todo.findByIdAndUpdate(req.params.id, update, {
-			new: true,
-			runValidators: true,
+		const todo = await Todo.findById(req.params.id);
+
+		updates.forEach((u) => {
+			todo[u] = req.body[u];
 		});
+
+		await todo.save();
+
 		if (!todo) {
 			return res.sendStatus(404);
 		}
