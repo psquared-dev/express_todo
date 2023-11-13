@@ -6,9 +6,18 @@ const todoRoutes = express.Router();
 
 todoRoutes.get("/todos", auth, async (req, res) => {
 	try {
-		const todos = await Todo.find({ owner: req.user._id });
-		// console.log(todos);
-		res.json(todos);
+		const match = {};
+
+		if (req.query.completed) {
+			match.completed = req.query.completed === "true";
+		}
+
+		await req.user.populate({
+			path: "todos",
+			match,
+		});
+
+		res.json(req.user.todos);
 	} catch (error) {
 		res.json(error.message);
 	}
