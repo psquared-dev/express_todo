@@ -1,54 +1,72 @@
 import express from "express";
 import User from "../models/UserModel.js";
+import auth from "../middleware/auth.js";
 
 const userRoutes = express.Router();
 
 userRoutes.post("/users/login", async (req, res) => {
 	try {
 		const user = await User.findByCredentials(req.body.email, req.body.password);
-		res.json(user);
+		const token = await user.generateAuthToken();
+		res.json({ user, token });
 	} catch (error) {
 		res.status(400).json(error.message);
 	}
 });
 
-userRoutes.get("/users", async (req, res) => {
+userRoutes.post("/users/logout", auth, async (req, res) => {
 	try {
-		const users = await User.find({});
-		res.json(users);
+		req.user.tokens = req.user.tokens.filter((token) => {
+			return token.token !== req.token;
+		});
+		await req.user.save();
+		res.json();
 	} catch (error) {
-		res.json(error);
+		res.status(500).json();
 	}
+});
+
+userRoutes.post("/users/logoutAll", auth, async (req, res) => {
+	try {
+		req.user.tokens = [];
+		await req.user.save();
+		res.json();
+	} catch (error) {
+		res.status(500).json(error.message);
+	}
+});
+
+userRoutes.get("/users/me", auth, async (req, res) => {
+	res.json(req.user);
 });
 
 userRoutes.post("/users", async (req, res) => {
 	try {
-		const newUser = req.body;
-		const todo = await User.create(newUser);
-		res.json(todo);
+		const newUser = await User.create(req.body);
+		const token = await newUser.generateAuthToken();
+		res.status(201).json({ newUser, token });
 	} catch (error) {
 		res.status(400).json(error.message);
 	}
 });
 
-userRoutes.get("/users/:id", async (req, res) => {
-	try {
-		const user = await User.findById(req.params.id);
+// userRoutes.get("/users/:id", async (req, res) => {
+// 	try {
+// 		const user = await User.findById(req.params.id);
 
-		if (!user) {
-			return res.sendStatus(404);
-		}
+// 		if (!user) {
+// 			return res.sendStatus(404);
+// 		}
 
-		return res.json(user);
-	} catch (error) {
-		return res.json(error);
-	}
-});
+// 		return res.json(user);
+// 	} catch (error) {
+// 		return res.json(error);
+// 	}
+// });
 
-userRoutes.put("/users/:id", async (req, res) => {
+userRoutes.put("/users/me", auth, async (req, res) => {
 	try {
 		const update = req.body;
-		console.log(update);
 
 		const updates = Object.keys(update);
 		const allowedUpdates = ["username", "email", "password"];
@@ -58,40 +76,26 @@ userRoutes.put("/users/:id", async (req, res) => {
 			return res.status(400).json({ error: "Invalid Updates" });
 		}
 
-		const user = await User.findById(req.params.id);
+		// const user = await User.findById(req.params.id);
 
 		updates.forEach((update) => {
-			user[update] = req.body[update];
+			req.user[update] = req.body[update];
 		});
 
-		await user.save();
+		await req.user.save();
 
-		// const user = await User.findByIdAndUpdate(req.params.id, update, {
-		// 	new: true,
-		// 	runValidators: true,
-		// });
-
-		if (!user) {
-			return res.sendStatus(404);
-		}
-
-		return res.json(user);
+		return res.json(req.user);
 	} catch (error) {
 		return res.json(error.message);
 	}
 });
 
-userRoutes.delete("/users/:id", async (req, res) => {
+userRoutes.delete("/users/me", auth, async (req, res) => {
 	try {
-		const user = await User.findByIdAndDelete(req.params.id);
-
-		if (!user) {
-			return res.sendStatus(404);
-		}
-
-		return res.json(user);
+		await req.user.deleteOne();
+		return res.json(req.user);
 	} catch (error) {
-		return res.status(500).json(error);
+		return res.status(500).json(error.message);
 	}
 });
 

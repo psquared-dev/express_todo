@@ -1,40 +1,47 @@
 import express from "express";
 import Todo from "../models/TodoModel.js";
+import auth from "../middleware/auth.js";
 
 const todoRoutes = express.Router();
 
-todoRoutes.get("/todos", async (req, res) => {
+todoRoutes.get("/todos", auth, async (req, res) => {
 	try {
-		const todos = await Todo.find({});
+		const todos = await Todo.find({ owner: req.user._id });
+		// console.log(todos);
 		res.json(todos);
 	} catch (error) {
-		res.json(error);
+		res.json(error.message);
 	}
 });
 
-todoRoutes.get("/todos/:id", async (req, res) => {
+todoRoutes.get("/todos/:id", auth, async (req, res) => {
 	try {
-		const todo = await Todo.findById(req.params.id);
+		const todo = await Todo.findOne({ _id: req.params.id, owner: req.user._id });
+		// const todo = await Todo.findById(req.params.id);
 		if (!todo) {
 			return res.sendStatus(404);
 		}
 		res.json(todo);
 	} catch (error) {
-		res.status(500).json(error);
+		res.status(500).json(error.message);
 	}
 });
 
-todoRoutes.post("/todos", async (req, res) => {
+todoRoutes.post("/todos", auth, async (req, res) => {
+	const newTodo = new Todo({
+		...req.body,
+		owner: req.user._id,
+	});
+
 	try {
-		const newTodo = req.body;
-		const todo = await Todo.create(newTodo);
-		res.json(todo);
+		await newTodo.save();
+		res.status(201).json(newTodo);
 	} catch (error) {
-		res.json(error);
+		res.json(error.message);
 	}
 });
 
-todoRoutes.put("/todos/:id", async (req, res) => {
+todoRoutes.put("/todos/:id", auth, async (req, res) => {
 	try {
 		const update = req.body;
 
@@ -47,7 +54,11 @@ todoRoutes.put("/todos/:id", async (req, res) => {
 			return res.status(400).json({ error: "Invalid Updates" });
 		}
 
-		const todo = await Todo.findById(req.params.id);
+		const todo = await Todo.findOne({ _id: req.params.id, owner: req.user._id });
+
+		if (!todo) {
+			return res.sendStatus(404);
+		}
 
 		updates.forEach((u) => {
 			todo[u] = req.body[u];
@@ -55,19 +66,20 @@ todoRoutes.put("/todos/:id", async (req, res) => {
 
 		await todo.save();
 
-		if (!todo) {
-			return res.sendStatus(404);
-		}
-
 		res.json(todo);
 	} catch (error) {
 		res.status(500).send(error);
 	}
 });
 
-todoRoutes.delete("/todos/:id", async (req, res) => {
+todoRoutes.delete("/todos/:id", auth, async (req, res) => {
 	try {
-		const todo = await Todo.findByIdAndDelete(req.params.id);
+		const todo = await Todo.findOneAndDelete({
+			_id: req.params.id,
+			owner: req.user._id,
+		});
+		// const todo = await Todo.findByIdAndDelete(req.params.id);
+
 		if (!todo) {
 			return res.sendStatus(404);
 		}

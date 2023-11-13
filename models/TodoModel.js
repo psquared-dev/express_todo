@@ -5,7 +5,6 @@ const todoSchema = new mongoose.Schema({
 		type: String,
 		required: true,
 		validate(value) {
-			console.log({ value });
 			if (value.includes("zzz")) {
 				throw new Error("not allowed zzz");
 			}
@@ -20,6 +19,11 @@ const todoSchema = new mongoose.Schema({
 	createdOn: {
 		type: Date,
 		default: Date.now,
+	},
+	owner: {
+		type: mongoose.Schema.Types.ObjectId,
+		required: true,
+		ref: "User",
 	},
 });
 

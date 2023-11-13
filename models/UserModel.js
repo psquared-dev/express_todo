@@ -1,6 +1,8 @@
 import mongoose from "mongoose";
 import validator from "validator";
 import bcryptjs from "bcryptjs";
+import jwt from "jsonwebtoken";
+import Todo from "./TodoModel.js";
 
 const userSchema = new mongoose.Schema({
 	username: {
@@ -31,6 +33,14 @@ const userSchema = new mongoose.Schema({
 			}
 		},
 	},
+	tokens: [
+		{
+			token: {
+				type: String,
+				required: true,
+			},
+		},
+	],
 });
 
 userSchema.statics.findByCredentials = async function (email, password) {
@@ -49,10 +59,49 @@ userSchema.statics.findByCredentials = async function (email, password) {
 	return user;
 };
 
+userSchema.virtual("todos", {
+	ref: "Todo",
+	localField: "_id",
+	foreignField: "owner",
+});
+
+// accessed by model instance
+userSchema.methods.generateAuthToken = async function () {
+	// this;
+	const token = jwt.sign({ _id: this._id.toString() }, "a_secret_key");
+	this.tokens = this.tokens.concat({ token });
+	await this.save();
+
+	return token;
+};
+
+userSchema.methods.toJSON = function () {
+	const userObject = this.toObject();
+
+	delete userObject.password;
+	delete userObject.tokens;
+
+	// console.log({ userObject });
+	return userObject;
+};
+
+// delete task associated with the user
+userSchema.pre(
+	"deleteOne",
+	{ document: true, query: false },
+	async function (next) {
+		debugger;
+		console.log("#################################");
+		const user = this;
+		await Todo.deleteMany({ owner: user._id });
+		next();
+	}
+);
+
+// accessed by model class
 // hash the plain text password
 userSchema.pre("save", async function (next) {
 	// this.password;
-	console.log("before save");
 
 	if (this.isModified("password")) {
 		this.password = await bcryptjs.hash(this.password, 8);
