@@ -4,44 +4,49 @@ import bcryptjs from "bcryptjs";
 import jwt from "jsonwebtoken";
 import Todo from "./TodoModel.js";
 
-const userSchema = new mongoose.Schema({
-	username: {
-		type: String,
-		require: true,
-		trim: true,
-	},
-	email: {
-		type: String,
-		require: true,
-		unique: true,
-		trim: true,
-		lowercase: true,
-		validate(value) {
-			if (!validator.isEmail(value)) {
-				throw new Error("Invalid Email");
-			}
+const userSchema = new mongoose.Schema(
+	{
+		username: {
+			type: String,
+			require: true,
+			trim: true,
 		},
-	},
-	password: {
-		type: String,
-		required: true,
-		trim: true,
-		minlength: 5,
-		validate(value) {
-			if (value.toLowerCase().includes("password")) {
-				throw new Error(`Password Can't contain "password"`);
-			}
-		},
-	},
-	tokens: [
-		{
-			token: {
-				type: String,
-				required: true,
+		email: {
+			type: String,
+			require: true,
+			unique: true,
+			trim: true,
+			lowercase: true,
+			validate(value) {
+				if (!validator.isEmail(value)) {
+					throw new Error("Invalid Email");
+				}
 			},
 		},
-	],
-});
+		password: {
+			type: String,
+			required: true,
+			trim: true,
+			minlength: 5,
+			validate(value) {
+				if (value.toLowerCase().includes("password")) {
+					throw new Error(`Password Can't contain "password"`);
+				}
+			},
+		},
+		tokens: [
+			{
+				token: {
+					type: String,
+					required: true,
+				},
+			},
+		],
+	},
+	{
+		timestamps: true,
+	}
+);
 
 userSchema.statics.findByCredentials = async function (email, password) {
 	const user = await User.findOne({ email });
@@ -90,8 +95,6 @@ userSchema.pre(
 	"deleteOne",
 	{ document: true, query: false },
 	async function (next) {
-		debugger;
-		console.log("#################################");
 		const user = this;
 		await Todo.deleteMany({ owner: user._id });
 		next();
