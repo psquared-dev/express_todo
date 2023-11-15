@@ -1,6 +1,7 @@
 import express from "express";
 import User from "../models/UserModel.js";
 import auth from "../middleware/auth.js";
+import multer from "multer";
 
 const userRoutes = express.Router();
 
@@ -97,6 +98,39 @@ userRoutes.delete("/users/me", auth, async (req, res) => {
 	} catch (error) {
 		return res.status(500).json(error.message);
 	}
+});
+
+const upload = multer({
+	limits: {
+		fileSize: 1_000_000,
+	},
+	fileFilter(req, file, cb) {
+		if (!file.originalname.match(/\.(jpg|jpeg|png)$/)) {
+			cb(new Error("Please upload an image"));
+		}
+
+		cb(undefined, true);
+	},
+});
+
+userRoutes.post(
+	"/user/me/avatar",
+	auth,
+	upload.single("upload"),
+	async (req, res) => {
+		req.user.avatar = req.file.buffer;
+		await req.user.save();
+		res.send("");
+	},
+	(error, req, res, next) => {
+		res.status(400).json(error.message);
+	}
+);
+
+userRoutes.delete("/user/me/avatar", auth, async (req, res) => {
+	req.user.avatar = undefined;
+	req.user.save();
+	res.send();
 });
 
 export default userRoutes;
