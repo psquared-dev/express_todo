@@ -15,6 +15,10 @@ todoRoutes.get("/todos", auth, async (req, res) => {
 		await req.user.populate({
 			path: "todos",
 			match,
+			options: {
+				limit: Number.parseInt(req.query.limit),
+				skip: Number.parseInt(req.query.skip),
+			},
 		});
 
 		res.json(req.user.todos);
