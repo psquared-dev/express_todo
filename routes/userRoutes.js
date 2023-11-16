@@ -2,6 +2,7 @@ import express from "express";
 import User from "../models/UserModel.js";
 import auth from "../middleware/auth.js";
 import multer from "multer";
+import sharp from "sharp";
 
 const userRoutes = express.Router();
 
@@ -118,7 +119,14 @@ userRoutes.post(
 	auth,
 	upload.single("upload"),
 	async (req, res) => {
-		req.user.avatar = req.file.buffer;
+		const buffer = await sharp(req.file.buffer)
+			.resize({
+				width: 250,
+				height: 250,
+			})
+			.png()
+			.toBuffer();
+		req.user.avatar = buffer;
 		await req.user.save();
 		res.send("");
 	},
