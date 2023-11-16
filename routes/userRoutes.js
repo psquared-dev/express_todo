@@ -114,7 +114,7 @@ const upload = multer({
 });
 
 userRoutes.post(
-	"/user/me/avatar",
+	"/users/me/avatar",
 	auth,
 	upload.single("upload"),
 	async (req, res) => {
@@ -127,10 +127,26 @@ userRoutes.post(
 	}
 );
 
-userRoutes.delete("/user/me/avatar", auth, async (req, res) => {
+userRoutes.delete("/users/me/avatar", auth, async (req, res) => {
 	req.user.avatar = undefined;
 	req.user.save();
 	res.send();
+});
+
+userRoutes.get("/users/:id/avatar", async (req, res) => {
+	try {
+		console.log(req.params.id);
+		const user = await User.findById(req.params.id);
+
+		if (!user || !user.avatar) {
+			throw new Error("");
+		}
+
+		res.set("content-type", "image/png");
+		res.send(user.avatar);
+	} catch (error) {
+		res.sendStatus(404);
+	}
 });
 
 export default userRoutes;
